@@ -61,11 +61,17 @@ uint8_t* FRAM::readBytes (int address, uint8_t* value, int len)
     cmd_buff[1] = (uint8_t)((address >> 16) & 0xFF);
     cmd_buff[2] = (uint8_t)((address >>  8) & 0xFF);
     cmd_buff[3] = (uint8_t)( address        & 0xFF);
-//    _spi->writeBytes(cmd_buff, 4);
-//    _spi->transferBytes(NULL, value, len);
-    memset(value, 0xFF, len);
+    
+#if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
+    _spi->writeBytes(cmd_buff, 4);
+    _spi->transferBytes(NULL, value, len);
+#else
     _spi->transfer(cmd_buff, 4);
-    _spi->transfer(value, len);
+    uint8_t* ptr = value;
+    for(int i = 0; i < len; i++){
+        *ptr++ = _spi->transfer(0xFF);
+    }
+#endif
     digitalWrite(_ssPin, HIGH);
     
     _spi->endTransaction();
@@ -82,7 +88,6 @@ void FRAM::writeBytes (int address, const uint8_t* value, int len)
     _spi->beginTransaction(SPISettings(_frequency, MSBFIRST, SPI_MODE0));
     
     digitalWrite(_ssPin, LOW);
-//  _spi->write(OP_WREN);
     _spi->transfer(OP_WREN);
     digitalWrite(_ssPin, HIGH);
     
@@ -92,16 +97,20 @@ void FRAM::writeBytes (int address, const uint8_t* value, int len)
     cmd_buff[1] = (uint8_t)((address >> 16) & 0xFF);
     cmd_buff[2] = (uint8_t)((address >>  8) & 0xFF);
     cmd_buff[3] = (uint8_t)( address        & 0xFF);
-//    _spi->writeBytes(cmd_buff, 4);
-//    _spi->writeBytes(value, len);
-    uint8_t tbuff[len];
-    memcpy(tbuff, value, len);
+    
+#if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
+    _spi->writeBytes(cmd_buff, 4);
+    _spi->writeBytes(value, len);
+#else
     _spi->transfer(cmd_buff, 4);
-    _spi->transfer(tbuff, len);
+    const uint8_t* ptr = value;
+    for(int i = 0; i < len; i++){
+        _spi->transfer(*ptr++);
+    }
+#endif
     digitalWrite(_ssPin, HIGH);
     
     digitalWrite(_ssPin, LOW);
-//    _spi->write(OP_WRDI);
     _spi->transfer(OP_WRDI);
     digitalWrite(_ssPin, HIGH);
     
