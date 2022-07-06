@@ -24,7 +24,7 @@ void setup() {
   Serial.println("------------------------------------\n");
 
   // Clear variables
-  name = '\0';
+  name = "\0";
   height = 0;
   age = 0;
 
